@@ -27,13 +27,13 @@ from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
     QMainWindow, QApplication,
     QLabel, QLineEdit, QMenu, QPushButton, QCheckBox, QTabWidget, QVBoxLayout, QHBoxLayout, QWidget, QInputDialog,
-    QFileDialog, QMenuBar, QMessageBox, QProgressDialog
+    QFileDialog, QMenuBar, QMessageBox, QProgressDialog, QGroupBox
 )
 
 from Class import seedSettings, settingkey
 from Class.seedSettings import SeedSettings
 from List.configDict import locationType
-from List.hashTextEntries import generateHashIcons
+from List.hashTextEntries import HASH_ICON_COUNT, generateHashIcons
 from Module.dailySeed import getDailyModifiers
 from Module.randomizePage import randomizePage
 from Module.seedshare import SharedSeed, ShareStringException
@@ -120,7 +120,6 @@ class KH2RandomizerApp(QMainWindow):
         pagelayout = QVBoxLayout()
         seed_layout = QHBoxLayout()
         submit_layout = QHBoxLayout()
-        self.seedhashlayout = QHBoxLayout()
         self.tabs = QTabWidget()
 
         self.menuBar = QMenuBar()
@@ -154,7 +153,6 @@ class KH2RandomizerApp(QMainWindow):
         pagelayout.addLayout(seed_layout)
         pagelayout.addWidget(self.tabs)
         pagelayout.addLayout(submit_layout)
-        pagelayout.addLayout(self.seedhashlayout)
         seed_layout.addWidget(QLabel("Seed"))
         self.seedName=QLineEdit()
         self.seedName.setPlaceholderText("Leave blank for a random seed")
@@ -184,29 +182,33 @@ class KH2RandomizerApp(QMainWindow):
         for i in range(len(self.widgets)):
             self.tabs.addTab(self.widgets[i],self.widgets[i].getName())
 
-
-        submitButton = QPushButton("Generate Seed (PCSX2)")
-        submitButton.clicked.connect(lambda : self.makeSeed("PCSX2"))
-        submit_layout.addWidget(submitButton)
-
-        submitButton = QPushButton("Generate Seed (PC)")
-        submitButton.clicked.connect(lambda : self.makeSeed("PC"))
-        submit_layout.addWidget(submitButton)
-
-        self.seedhashlayout.addWidget(QLabel("Seed Hash"))
-
+        seedhashlayout = QHBoxLayout()
+        seedhashlayout.addWidget(QLabel("Seed Hash"))
         self.hashIconPath = Path(resource_path("static/seed-hash-icons"))
-        self.hashIcons = []
-        for i in range(7):
-            self.hashIcons.append(QLabel())
-            self.hashIcons[-1].blockSignals(True)
-            #self.hashIcons[-1].setIconSize(QSize(50,50))
-            self.hashIcons[-1].setPixmap(QPixmap(str(self.hashIconPath.absolute())+"/"+"question-mark.png"))
-            self.seedhashlayout.addWidget(self.hashIcons[-1])
+        self.hashIcons = [QLabel() for _ in range(HASH_ICON_COUNT)]
+        for label in self.hashIcons:
+            label.blockSignals(True)
+            seedhashlayout.addWidget(label)
+        seed_hash_box = QGroupBox()
+        seed_hash_box.setLayout(seedhashlayout)
+        submit_layout.addWidget(seed_hash_box)
+
+        submit_button_pcsx2 = QPushButton("Generate Seed (PCSX2)")
+        submit_button_pcsx2.clicked.connect(lambda: self.makeSeed("PCSX2"))
+        submit_layout.addWidget(submit_button_pcsx2, stretch=2)
+
+        submit_button_pc = QPushButton("Generate Seed (PC)")
+        submit_button_pc.clicked.connect(lambda: self.makeSeed("PC"))
+        submit_layout.addWidget(submit_button_pc, stretch=2)
 
         widget = QWidget()
         widget.setLayout(pagelayout)
         self.setCentralWidget(widget)
+
+        self.update_hash_icons()
+
+        self.seedName.textChanged.connect(self.seed_name_text_changed)
+        self.spoiler_log.stateChanged.connect(self.spoiler_log_state_changed)
 
     def closeEvent(self, e):
         settings_json = self.settings.settings_json(include_private=True)
@@ -227,15 +229,43 @@ class KH2RandomizerApp(QMainWindow):
         for widget in self.widgets:
             widget.update_widgets()
 
-        self.fixSeedName()
-
         message = QMessageBox(text=mod_string)
         message.setWindowTitle('KH2 Seed Generator - Daily Seed')
         message.exec()
 
-    def fixSeedName(self):
-        new_string = re.sub(r'[^a-zA-Z0-9]', '', self.seedName.text())
+    def seed_name_text_changed(self):
+        # Remove any non-alphanumeric characters and limit the size to 91 (7 X 13) so that seed share strings don't get
+        # super long. (Did you know that 7 and 13 are important numbers in the KH series?)
+        new_string = re.sub(r'[^a-zA-Z0-9]', '', self.seedName.text())[:91]
         self.seedName.setText(new_string)
+        self.update_hash_icons()
+
+    def spoiler_log_state_changed(self):
+        self.update_hash_icons()
+
+    def random_seed_name(self):
+        characters = string.ascii_letters + string.digits
+        # Using a local Random instance which won't be affected by our changes to the seed of the global Random
+        return ''.join(random.Random().choices(characters, k=30))
+
+    def seed_rng_string(self, seed_name: str) -> str:
+        # Seed is based on seed name, UI version, and if a spoiler log is generated or not.
+        return seed_name + LOCAL_UI_VERSION + str(self.spoiler_log.isChecked())
+
+    def update_hash_icons(self):
+        seed_name = self.seedName.text()
+        if seed_name == '':
+            icon_names = ['question-mark' for _ in range(HASH_ICON_COUNT)]
+        else:
+            # Using a local Random instance here just to be extra safe with not messing with the global RNG
+            local_random = random.Random(self.seed_rng_string(seed_name))
+            icon_names = generateHashIcons(local_random)
+
+        icons_dir = str(self.hashIconPath.absolute())
+        for index, icon_name in enumerate(icon_names):
+            path = icons_dir + '/' + icon_name + '.png'
+            pixmap = QPixmap(path).scaledToHeight(40, Qt.TransformationMode.SmoothTransformation)
+            self.hashIcons[index].setPixmap(pixmap)
 
     def make_seed_session(self):
         makeSpoilerLog = self.spoiler_log.isChecked()
@@ -243,14 +273,12 @@ class KH2RandomizerApp(QMainWindow):
         session={}
 
         # seed
-        session["seed"] = self.seedName.text()
-        if session["seed"] == "":
-            characters = string.ascii_letters + string.digits
-            session["seed"] = (''.join(random.choice(characters) for i in range(30)))
-            self.seedName.setText(session["seed"])
-
-        # make the seed hash dependent on ui version and if a spoiler log is generated or not.
-        random.seed(session["seed"]+LOCAL_UI_VERSION+str(makeSpoilerLog))
+        seed_name = self.seedName.text()
+        if seed_name == '':
+            seed_name = self.random_seed_name()
+            self.seedName.setText(seed_name)
+        random.seed(self.seed_rng_string(seed_name))
+        session['seed'] = seed_name
 
         # seedHashIcons
         session["seedHashIcons"] = generateHashIcons()
@@ -300,10 +328,6 @@ class KH2RandomizerApp(QMainWindow):
                 seed_modifiers.append(key[1])
         if self.settings.get(settingkey.ABILITY_POOL) == 'randomize':
             seed_modifiers.append('Randomize Ability Pool')
-
-        # update the seed hash display
-        for index, icon in enumerate(session['seedHashIcons']):
-            self.hashIcons[index].setPixmap(QPixmap(str(self.hashIconPath.absolute()) + '/' + icon + '.png'))
 
         # spoilerLog
         session["spoilerLog"] = makeSpoilerLog
@@ -360,8 +384,6 @@ class KH2RandomizerApp(QMainWindow):
         return session
 
     def makeSeed(self,platform):
-        self.fixSeedName()
-
         data = {
             'platform': platform,
             'cmdMenuChoice': self.settings.get(settingkey.COMMAND_MENU),
@@ -422,13 +444,10 @@ class KH2RandomizerApp(QMainWindow):
             widget.update_widgets()
 
     def shareSeed(self):
-        self.fixSeedName()
-
         # if seed hasn't been set yet, make one
         current_seed = self.seedName.text()
         if current_seed == "":
-            characters = string.ascii_letters + string.digits
-            current_seed = (''.join(random.choice(characters) for i in range(30)))
+            current_seed = self.random_seed_name()
             self.seedName.setText(current_seed)
 
         shared_seed = SharedSeed(
