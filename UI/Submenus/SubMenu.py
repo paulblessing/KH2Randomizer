@@ -3,7 +3,8 @@ import sys
 
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QCheckBox, QComboBox, QSpinBox, QDoubleSpinBox, QListWidget, QPushButton, QGroupBox
+from PySide6.QtWidgets import QCheckBox, QComboBox, QSpinBox, QDoubleSpinBox, QListWidget, QPushButton, QGroupBox, \
+    QFrame
 from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout, QHBoxLayout, QGridLayout
 
 import Class.seedSettings
@@ -35,9 +36,13 @@ class KH2Submenu(QWidget):
             label.setToolTip(tooltip)
 
         layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(label, stretch=1)
         layout.addWidget(option, stretch=2, alignment=Qt.AlignLeft)
-        self.menulayout.addLayout(layout)
+
+        frame = QFrame()
+        frame.setLayout(layout)
+        self.menulayout.addWidget(frame)
 
     def add_option(self, setting_name: str):
         setting = Class.seedSettings.settings_by_name[setting_name]
@@ -61,6 +66,11 @@ class KH2Submenu(QWidget):
 
         self._add_option_widget(setting.ui_label, setting.tooltip, widget)
         self.widgets_and_settings_by_name[setting_name] = (setting, widget)
+
+    def set_option_visibility(self, name: str, visible: bool):
+        (_, widget) = self.widgets_and_settings_by_name[name]
+        # As of right now, each option widget has a direct parent frame that can have its visibility toggled
+        widget.parentWidget().setVisible(visible)
 
     def make_multiselect_buttons(self, setting_name: str) -> (MultiSelect, list[QPushButton]):
         setting = Class.seedSettings.settings_by_name[setting_name]
