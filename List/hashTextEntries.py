@@ -1,5 +1,7 @@
 import random
 
+HASH_ICON_COUNT = 7
+
 hashTextEntries = [
     "item-consumable",
     "item-tent",
@@ -40,5 +42,9 @@ hashTextEntries = [
 #    "button-circle",
 ]
 
-def generateHashIcons():
-    return random.choices(hashTextEntries, k=7)
+
+def generateHashIcons(local_random: random.Random = None):
+    if local_random is None:
+        return random.choices(hashTextEntries, k=HASH_ICON_COUNT)
+    else:
+        return local_random.choices(hashTextEntries, k=HASH_ICON_COUNT)
