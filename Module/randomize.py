@@ -1,6 +1,9 @@
 from dataclasses import dataclass, field
 import random, zipfile, yaml, io, json, os, base64, asyncio, struct
 from pathlib import Path
+
+from Class import settingkey
+from Class.seedSettings import SeedSettings
 from Module.spoilerLog import generateSpoilerLog
 from Module.randomCmdMenu import RandomCmdMenu
 from Module.randomBGM import RandomBGM
@@ -317,7 +320,17 @@ class KH2Randomizer():
     def setNoAP(self, settrue=False):
         self._noap = settrue
 
-    def generateZip(self, enemyOptions={"boss":"Disabled"}, spoilerLog = False, cmdMenuChoice = "vanilla", randomBGM = False, hintsText = None, startingInventory=[], platform="PCSX2"):
+    def generateZip(
+            self,
+            enemyOptions={"boss":"Disabled"},
+            spoilerLog = False,
+            cmdMenuChoice = "vanilla",
+            hintsText = None,
+            startingInventory=[],
+            platform="PCSX2",
+            extracted_files_path: Path = None,
+            seed_settings: SeedSettings = None
+    ):
 
         def resource_path(relative_path):
             """ Get absolute path to resource, works for dev and for PyInstaller """
@@ -507,7 +520,14 @@ class KH2Randomizer():
 
             mod["assets"] += RandomCmdMenu.randomizeCmdMenus(cmdMenuChoice, outZip, platform)
             
-            mod["assets"] += RandomBGM.randomizeBGM(randomBGM, platform)
+            mod["assets"] += RandomBGM.randomize_music(
+                platform=platform,
+                extracted_files_path=extracted_files_path,
+                music_rando_mode=seed_settings.get(settingkey.MUSIC_RANDO_MODE),
+                games_to_include=seed_settings.get(settingkey.BGM_GAMES),
+                add_custom_music=seed_settings.get(settingkey.MUSIC_RANDO_ADD_CUSTOM_MUSIC),
+                exclude_dmca_unsafe=seed_settings.get(settingkey.MUSIC_RANDO_EXCLUDE_DMCA_UNSAFE)
+            )
 
             outZip.write(resource_path(Path("icon.png")), "icon.png")
 

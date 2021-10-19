@@ -36,6 +36,7 @@ from List.configDict import locationType
 from List.hashTextEntries import HASH_ICON_COUNT, generateHashIcons
 from Module.dailySeed import getDailyModifiers
 from Module.randomizePage import randomizePage
+from Module.randomBGM import RandomBGM
 from Module.seedshare import SharedSeed, ShareStringException
 from UI.FirstTimeSetup.firsttimesetup import FirstTimeSetup
 from UI.Submenus.BossEnemyMenu import BossEnemyMenu
@@ -50,6 +51,9 @@ from UI.Submenus.StartingMenu import StartingMenu
 from UI.Submenus.WorldMenu import WorldMenu
 
 LOCAL_UI_VERSION = '1.99.3'
+
+# TODO: Read from config or however this ends up being stored
+EXTRACTED_FILES_PATH = 'D:\\KH\\PC\\ExtractedFiles2'
 
 
 class Logger(object):
@@ -76,13 +80,15 @@ PRESET_FOLDER = "presets"
 class GenSeedThread(QThread):
     finished = Signal(object)
 
-    def provideData(self,data,session):
+    def provideData(self, data, session, seed_settings: SeedSettings, extracted_files_path: Path):
         self.data=data
         self.session = session
+        self.seed_settings = seed_settings
+        self.extracted_files_path = extracted_files_path
         self.zip_file = None
 
     def run(self):
-        zip_file = randomizePage(self.data,self.session,local_ui=True)
+        zip_file = randomizePage(self.data, self.session, self.extracted_files_path, self.seed_settings, local_ui=True)
         self.finished.emit(zip_file)
 
 
@@ -95,6 +101,7 @@ class KH2RandomizerApp(QMainWindow):
         self.mods = getDailyModifiers(self.startTime)
 
         self.settings = SeedSettings()
+        self.extracted_files_path = Path(EXTRACTED_FILES_PATH)
 
         if not os.path.exists(AUTOSAVE_FOLDER):
             os.makedirs(AUTOSAVE_FOLDER)
@@ -107,6 +114,8 @@ class KH2RandomizerApp(QMainWindow):
                 except Exception:
                     print('Unable to apply last settings - will use defaults')
                     pass
+
+        RandomBGM.set_up(self.extracted_files_path)
 
         with open(resource_path("UI/stylesheet.qss"),"r") as style:
             data = style.read()
@@ -386,8 +395,7 @@ class KH2RandomizerApp(QMainWindow):
     def makeSeed(self,platform):
         data = {
             'platform': platform,
-            'cmdMenuChoice': self.settings.get(settingkey.COMMAND_MENU),
-            'randomBGM': self.settings.get(settingkey.BGM_OPTIONS) + self.settings.get(settingkey.BGM_GAMES)
+            'cmdMenuChoice': self.settings.get(settingkey.COMMAND_MENU)
         }
 
         session = self.make_seed_session()
@@ -419,7 +427,7 @@ class KH2RandomizerApp(QMainWindow):
         self.progress.show()
 
         self.thread = GenSeedThread()
-        self.thread.provideData(data,session)
+        self.thread.provideData(data, session, self.settings, self.extracted_files_path)
         self.thread.finished.connect(self.handleResult)
         self.thread.start()
 

@@ -567,20 +567,46 @@ _all_settings = [
         default='vanilla'
     ),
 
-    MultiSelect(
-        name=settingkey.BGM_OPTIONS,
-        ui_label='Music Options (PC Only)',
-        choices={option: option for option in RandomBGM.getOptions()},
+    SingleSelect(
+        name=settingkey.MUSIC_RANDO_MODE,
+        ui_label='Music Randomizer Mode',
+        choices={
+            'off': 'Off',
+            'wild': 'Wild',
+            'categorize': 'Categories'
+        },
         shared=False,
-        default=[]
+        default='off',
+        tooltip=textwrap.dedent('''
+            Off - Music is not randomized
+            Wild - All songs go into the same pool
+            Categories - Songs are separated into categories for field/battle/cutscene/etc
+        ''')
     ),
 
     MultiSelect(
         name=settingkey.BGM_GAMES,
         ui_label='Games To Include',
-        choices={option: option for option in RandomBGM.getGames()},
+        choices=RandomBGM.builtin_game_options(),
         shared=False,
-        default=[]
+        default=[],
+        tooltip='Add songs from these games to the randomized song pool'
+    ),
+
+    Toggle(
+        name=settingkey.MUSIC_RANDO_EXCLUDE_DMCA_UNSAFE,
+        ui_label='Exclude DMCA-risky Songs',
+        shared=False,
+        default=True,
+        tooltip='Whether or not to exclude songs from the pool that might be risky for streaming due to DMCA'
+    ),
+
+    Toggle(
+        name=settingkey.MUSIC_RANDO_ADD_CUSTOM_MUSIC,
+        ui_label='Add Custom Music',
+        shared=False,
+        default=False,
+        tooltip='Whether or not to include custom music (check the custom-music folder within your extracted files location)'
     ),
 
 ]

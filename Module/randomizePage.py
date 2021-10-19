@@ -1,3 +1,6 @@
+from pathlib import Path
+
+from Class.seedSettings import SeedSettings
 from Module.modifier import SeedModifier
 from Module.seedEvaluation import SeedValidator
 from List.configDict import locationType, locationDepth
@@ -7,7 +10,7 @@ from Module.randomize import KH2Randomizer
 
 development_mode = os.environ.get("DEVELOPMENT_MODE")
 
-def randomizePage(data, sessionDict, local_ui=False):
+def randomizePage(data, sessionDict, extracted_files_path: Path, seed_settings: SeedSettings, local_ui=False):
     platform = data['platform']
     excludeList = list(set(locationType) - set(sessionDict['includeList']))
     excludeList.append(sessionDict["levelChoice"])
@@ -17,7 +20,6 @@ def randomizePage(data, sessionDict, local_ui=False):
         excludeList.remove(locationType.Puzzle)
 
     cmdMenuChoice = data["cmdMenuChoice"]
-    randomBGM = data["randomBGM"]
     sessionDict["startingInventory"] += SeedModifier.library("Library of Assemblage" in sessionDict["seedModifiers"]) + SeedModifier.schmovement("Schmovement" in sessionDict["seedModifiers"])
 
     seedValidation = SeedValidator(sessionDict)
@@ -56,7 +58,16 @@ def randomizePage(data, sessionDict, local_ui=False):
             notValidSeed = False
             
             try:
-                zip = randomizer.generateZip(randomBGM = randomBGM, platform = platform, startingInventory = sessionDict["startingInventory"], hintsText = hintsText, cmdMenuChoice = cmdMenuChoice, spoilerLog = bool(sessionDict["spoilerLog"]), enemyOptions = json.loads(sessionDict["enemyOptions"]))
+                zip = randomizer.generateZip(
+                    platform=platform,
+                    startingInventory=sessionDict["startingInventory"],
+                    hintsText=hintsText,
+                    cmdMenuChoice=cmdMenuChoice,
+                    spoilerLog=bool(sessionDict["spoilerLog"]),
+                    enemyOptions=json.loads(sessionDict["enemyOptions"]),
+                    extracted_files_path=extracted_files_path,
+                    seed_settings=seed_settings
+                )
                 if development_mode:
                     development_mode_path = os.environ.get("DEVELOPMENT_MODE_PATH")
                     if development_mode_path:

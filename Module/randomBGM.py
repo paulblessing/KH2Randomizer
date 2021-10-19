@@ -1,4 +1,34 @@
-import random, os, zipfile
+import os
+import random
+from pathlib import Path
+
+
+class Song:
+
+    def __init__(self, kind: str):
+        self.kind = kind
+
+
+class BuiltInSong(Song):
+
+    def __init__(self, kind: str, relative_path: str):
+        super().__init__(kind)
+        self.relative_path = relative_path
+
+    def __str__(self):
+        return self.relative_path
+
+
+class CustomSong(Song):
+
+    def __init__(self, kind: str, absolute_path: Path, mod_relative_path: str):
+        super().__init__(kind)
+        self.absolute_path = absolute_path
+        self.mod_relative_path = mod_relative_path
+
+    def __str__(self) -> str:
+        return str(self.absolute_path)
+
 
 musicList = {
     "KH2": [
@@ -649,6 +679,7 @@ class RandomBGM():
             #    print ("Orig = " + original_song["kind"] + " | New = " + new_song["kind"])
         return BGMAssets
 
+    @staticmethod
     def getOptions():
         return [
             "DMCA-SAFE",
@@ -657,6 +688,7 @@ class RandomBGM():
             "Randomize Cutscene Music Separately"
         ]
 
+    @staticmethod
     def getGames():
         return [
             "KH2",
@@ -668,3 +700,107 @@ class RandomBGM():
             #framework already done for this option. just needs options on the site to set the number of tracks to use
             #"CUSTOM"
         ]
+
+    @staticmethod
+    def builtin_game_options():
+        return {
+            'KH2': 'Kingdom Hearts 2',
+            'KH1': 'Kingdom Hearts',
+            'BBS': 'Birth by Sleep',
+            'RECOM': 'Re: Chain of Memories',
+            'DDD': 'Dream Drop Distance',
+            'MOVIES': 'Movies/Theater'
+        }
+
+    @staticmethod
+    def set_up(extracted_files_path: Path):
+        custom_music_path = Path(extracted_files_path, 'custom-music')
+        for kind in ['battle', 'cutscene', 'field', 'title']:
+            Path(custom_music_path, kind).mkdir(parents=True, exist_ok=True)
+
+    @staticmethod
+    def randomize_music(
+            platform: str,
+            extracted_files_path: Path,
+            music_rando_mode: str,
+            games_to_include: list[str],
+            add_custom_music: bool,
+            exclude_dmca_unsafe: bool
+    ):
+        if platform == 'PCSX2' or music_rando_mode == 'off':
+            return []
+
+        # TODO: Implement a category for "ending" music?
+        categorized_songs: dict[str, list[Song]] = {
+            'battle': [],
+            'cutscene': [],
+            'field': [],
+            'title': []
+        }
+        for game in games_to_include:
+            game_path = musicPaths[game]
+
+            for song in musicList[game]:
+                if exclude_dmca_unsafe and song.get('dmca', False):
+                    continue
+                kind = song['kind']
+                if kind in categorized_songs:
+                    categorized_songs[kind].append(BuiltInSong(kind, game_path + song['name']))
+
+        if add_custom_music:
+            custom_music_path = Path(extracted_files_path, 'custom-music')
+            base_path_length = len(str(custom_music_path))
+            for kind in categorized_songs.keys():
+                kind_path = Path(custom_music_path, kind)
+                if kind_path.is_dir():
+                    for dirpath, _, files in os.walk(kind_path):
+                        for file in files:
+                            _, extension = os.path.splitext(file)
+                            if extension == '.scd':
+                                mod_relative_path = dirpath[base_path_length:] + '\\' + file
+                                categorized_songs[kind].append(CustomSong(kind, Path(dirpath, file), mod_relative_path))
+
+        all_songs = []
+        for songs in categorized_songs.values():
+            for song in songs:
+                all_songs.append(song)
+            random.shuffle(songs)
+        random.shuffle(all_songs)
+
+        result_songs = {}
+        for original_song in musicList['KH2']:
+            new_song = None
+            if music_rando_mode == 'wild':
+                if all_songs:
+                    new_song = all_songs.pop()
+            elif music_rando_mode == 'categorize':
+                kind_songs = categorized_songs[original_song['kind']]
+                if kind_songs:
+                    new_song = kind_songs.pop()
+            if new_song is not None:
+                result_songs[original_song['name']] = new_song
+
+        assets = []
+        for original_song_name, new_song in result_songs.items():
+            if isinstance(new_song, BuiltInSong):
+                asset = {
+                    'method': 'copy',
+                    'name': original_song_name,
+                    'source': [{
+                        'name': new_song.relative_path,
+                        'type': 'internal'
+                    }]
+                }
+                assets.append(asset)
+            if isinstance(new_song, CustomSong):
+                asset = {
+                    'method': 'copy',
+                    'name': original_song_name,
+                    'source': [{
+                        'name': '..\\custom-music' + new_song.mod_relative_path,
+                        'type': 'internal'
+                    }]
+                }
+                assets.append(asset)
+
+        return assets
