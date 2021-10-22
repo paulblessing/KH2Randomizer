@@ -1,23 +1,17 @@
 import os
-import sys
 
+from Module.resources import resource_path
 
-# Keep resource_path definition and the setting of the environment variable as close to the top as possible.
-# These need to happen before anything Boss/Enemy Rando gets loaded for the sake of the distributed binary.
-def resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and for PyInstaller """
-    base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
-    return os.path.join(base_path, relative_path)
-
-
+# Keep the setting of the environment variable as close to the top as possible.
+# This needs to happen before anything Boss/Enemy Rando gets loaded for the sake of the distributed binary.
 os.environ["USE_KH2_GITPATH"] = resource_path("extracted_data")
-
 
 import datetime
 import json
 import random
 import re
 import string
+import sys
 from pathlib import Path
 
 import pyperclip as pc
