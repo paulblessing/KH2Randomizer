@@ -4,8 +4,9 @@ from UI.Submenus.SubMenu import KH2Submenu
 
 
 class SoraMenu(KH2Submenu):
-    def __init__(self, settings: SeedSettings):
-        super().__init__(title='Sora', settings=settings)
+
+    def __init__(self, settings: SeedSettings, enabled: bool = True):
+        super().__init__(title='Sora', settings=settings, enabled=enabled)
 
         self.add_option(settingkey.SORA_LEVELS)
         self.add_option(settingkey.FORM_LEVEL_REWARDS)

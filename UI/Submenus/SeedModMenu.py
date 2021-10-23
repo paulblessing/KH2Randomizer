@@ -4,8 +4,9 @@ from UI.Submenus.SubMenu import KH2Submenu
 
 
 class SeedModMenu(KH2Submenu):
-    def __init__(self, settings: SeedSettings):
-        super().__init__(title='Seed Modifiers', settings=settings)
+
+    def __init__(self, settings: SeedSettings, enabled: bool = True):
+        super().__init__(title='Seed Modifiers', settings=settings, enabled=enabled)
 
         self.add_option(settingkey.GLASS_CANNON)
         self.add_option(settingkey.BETTER_JUNK)

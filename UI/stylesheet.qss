@@ -8,7 +8,7 @@ Available at: https://github.com/GTRONICK/QSS/blob/master/ElegantDark.qss
 Modified for use in KH2Randomizer 29/09/2021
 */
 
-QMainWindow {
+QMainWindow, QDialog {
     background-color:rgb(82, 82, 82);
 }
 QTextEdit {

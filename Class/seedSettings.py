@@ -147,11 +147,11 @@ class MultiSelect(Setting):
         self.choice_icons = choice_icons
 
     def settings_string(self, value) -> str:
-        selected_indexes = ''
+        selected_indexes = []
         for selected in value:
             index = self.choice_keys.index(selected)
-            selected_indexes += _available_chars[index]
-        return selected_indexes
+            selected_indexes.append(_available_chars[index])
+        return ''.join(sorted(selected_indexes))
 
     def parse_settings_string(self, settings_string: str):
         selected_values = []
@@ -665,3 +665,8 @@ class SeedSettings:
         for key, value in settings_json.items():
             if key in filtered_keys:
                 self.values[key] = value
+
+    def apply_private_settings(self, other):
+        for name, setting in settings_by_name.items():
+            if not setting.shared:
+                self.set(name, other.get(name))

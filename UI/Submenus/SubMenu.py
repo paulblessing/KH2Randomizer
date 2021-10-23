@@ -11,11 +11,13 @@ from Module.resources import resource_path
 
 
 class KH2Submenu(QWidget):
-    def __init__(self, title: str, in_layout="vertical", settings: SeedSettings = None):
+
+    def __init__(self, title: str, settings: SeedSettings, enabled: bool, in_layout='vertical'):
         super().__init__()
 
         self.title = title
         self.settings = settings
+        self.enabled = enabled
         self.widgets_and_settings_by_name = {}
 
         if in_layout == "vertical":
@@ -76,6 +78,7 @@ class KH2Submenu(QWidget):
             if choice_key in selected_keys:
                 button.setChecked(True)
             button.toggled.connect(lambda state: self._update_multi_buttons(setting))
+            button.setEnabled(self.enabled)
 
             widgets.append(button)
 
@@ -142,12 +145,14 @@ class KH2Submenu(QWidget):
         combo_box.addItems(setting.choice_values)
         combo_box.setCurrentIndex(keys.index(self.settings.get(name)))
         combo_box.currentIndexChanged.connect(lambda index: self.settings.set(name, keys[index]))
+        combo_box.setEnabled(self.enabled)
         return combo_box
 
     def make_check_box(self, name: str):
         check_box = QCheckBox()
         check_box.setCheckState(Qt.Checked if self.settings.get(name) else Qt.Unchecked)
         check_box.stateChanged.connect(lambda state: self.settings.set(name, state == Qt.Checked))
+        check_box.setEnabled(self.enabled)
         return check_box
 
     def make_int_spin_box(self, name: str):
@@ -157,6 +162,7 @@ class KH2Submenu(QWidget):
         spin_box.setSingleStep(setting.step)
         spin_box.setValue(self.settings.get(name))
         spin_box.valueChanged.connect(lambda value: self.settings.set(name, value))
+        spin_box.setEnabled(self.enabled)
         line = spin_box.lineEdit()
         line.setReadOnly(True)
         return spin_box
@@ -169,6 +175,7 @@ class KH2Submenu(QWidget):
         spin_box.setSingleStep(setting.step)
         spin_box.setValue(self.settings.get(name))
         spin_box.valueChanged.connect(lambda value: self.settings.set(name, value))
+        spin_box.setEnabled(self.enabled)
         line = spin_box.lineEdit()
         line.setReadOnly(True)
         return spin_box
@@ -185,6 +192,7 @@ class KH2Submenu(QWidget):
                 list_widget.item(index).setSelected(True)
 
         list_widget.itemSelectionChanged.connect(lambda: self._update_multi_list(setting, list_widget))
+        list_widget.setEnabled(self.enabled)
         return list_widget
 
     def _update_multi_list(self, setting: MultiSelect, widget: QListWidget):

@@ -5,8 +5,9 @@ from UI.Submenus.SubMenu import KH2Submenu
 
 # TODO: Come up with a way to only show settings for the selected hint system
 class HintsMenu(KH2Submenu):
-    def __init__(self, settings: SeedSettings):
-        super().__init__(title='Hint Systems', settings=settings)
+
+    def __init__(self, settings: SeedSettings, enabled: bool = True):
+        super().__init__(title='Hint Systems', settings=settings, enabled=enabled)
 
         self.add_option(settingkey.HINT_SYSTEM)
         self.add_option(settingkey.REPORT_DEPTH)

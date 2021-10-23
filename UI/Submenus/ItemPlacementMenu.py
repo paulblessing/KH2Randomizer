@@ -4,8 +4,9 @@ from UI.Submenus.SubMenu import KH2Submenu
 
 
 class ItemPlacementMenu(KH2Submenu):
-    def __init__(self, settings: SeedSettings):
-        super().__init__(title='Item Placement Options', settings=settings)
+
+    def __init__(self, settings: SeedSettings, enabled: bool = True):
+        super().__init__(title='Item Placement Options', settings=settings, enabled=enabled)
 
         self.add_option(settingkey.ENABLE_PROMISE_CHARM)
         self.add_option(settingkey.ITEM_PLACEMENT_DIFFICULTY)
